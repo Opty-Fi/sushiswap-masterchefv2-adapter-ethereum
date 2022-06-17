@@ -35,7 +35,7 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
       this.sushiswapMasterChefV2AdapterEthereum.address,
       getOverrideOptions(),
     );
-    // 1.1 assert whether lptoken balance is as expected or not after deposit
+    // 2. assert whether lptoken balance is as expected or not after deposit
     const actualLPTokenBalanceAfterDeposit =
       await this.sushiswapMasterChefV2AdapterEthereum.getLiquidityPoolTokenBalance(
         this.testDeFiAdapter.address,
@@ -45,7 +45,7 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     const expectedLPTokenBalanceAfterDeposit = (await masterChefV2Instance.userInfo(pid, this.testDeFiAdapter.address))
       .amount;
     expect(actualLPTokenBalanceAfterDeposit).to.be.eq(expectedLPTokenBalanceAfterDeposit);
-    // 1.2 assert whether underlying token balance is as expected or not after deposit
+    // 3. assert whether underlying token balance is as expected or not after deposit
     const actualUnderlyingTokenBalanceAfterDeposit = await this.testDeFiAdapter.getERC20TokenBalance(
       pool.tokens[0],
       this.testDeFiAdapter.address,
@@ -54,7 +54,7 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
       this.testDeFiAdapter.address,
     );
     expect(actualUnderlyingTokenBalanceAfterDeposit).to.be.eq(expectedUnderlyingTokenBalanceAfterDeposit);
-    // 1.3 assert whether the amount in token is as expected or not after depositing
+    // 4. assert whether the amount in token is as expected or not after depositing
     const actualAmountInTokenAfterDeposit = await this.sushiswapMasterChefV2AdapterEthereum.getAllAmountInToken(
       this.testDeFiAdapter.address,
       pool.tokens[0],
@@ -63,17 +63,17 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     const expectedAmountInTokenAfterDeposit = (await masterChefV2Instance.userInfo(pid, this.testDeFiAdapter.address))
       .amount;
     expect(actualAmountInTokenAfterDeposit).to.be.eq(expectedAmountInTokenAfterDeposit);
-    // 2.2 assert whether the reward token is as expected or not
+    // 5. assert whether the reward token is as expected or not
     const actualRewardToken = await this.sushiswapMasterChefV2AdapterEthereum.getRewardToken(pool.pool);
     const expectedRewardToken = rewardToken;
     expect(getAddress(actualRewardToken)).to.be.eq(getAddress(expectedRewardToken));
-    // 2.3 make a transaction for mining a block to get finite unclaimed reward amount
+    // 6. make a transaction for mining a block to get finite unclaimed reward amount
     await this.signers.admin.sendTransaction({
       value: utils.parseEther("0"),
       to: await this.signers.admin.getAddress(),
       ...getOverrideOptions(),
     });
-    // 2.4 assert whether the unclaimed reward amount is as expected or not after staking
+    // 7. assert whether the unclaimed reward amount is as expected or not after staking
     const actualUnclaimedReward = await this.sushiswapMasterChefV2AdapterEthereum.getUnclaimedRewardTokenAmount(
       this.testDeFiAdapter.address,
       pool.pool,
@@ -81,22 +81,41 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     );
     const expectedUnclaimedReward = await masterChefV2Instance.pendingSushi(pid, this.testDeFiAdapter.address);
     expect(actualUnclaimedReward).to.be.eq(expectedUnclaimedReward);
-    // 3. claim the reward token
+    // 8. claim the reward token
     await this.testDeFiAdapter.testClaimRewardTokenCode(
       pool.pool,
       this.sushiswapMasterChefV2AdapterEthereum.address,
       getOverrideOptions(),
     );
-    // 3.1 assert whether the reward token's balance is as expected or not after claiming
-    // TODO check extra rewards
-    const actualRewardTokenBalanceAfterClaim = await this.testDeFiAdapter.getERC20TokenBalance(
+    // 9. assert whether the SUSHI token's balance is as expected or not after claiming
+    const actualSushiTokenBalanceAfterClaim = await this.testDeFiAdapter.getERC20TokenBalance(
       await this.sushiswapMasterChefV2AdapterEthereum.getRewardToken(pool.pool),
       this.testDeFiAdapter.address,
     );
-    const expectedRewardTokenBalanceAfterClaim = await sushiRewardInstance.balanceOf(this.testDeFiAdapter.address);
-    expect(actualRewardTokenBalanceAfterClaim).to.be.eq(expectedRewardTokenBalanceAfterClaim);
+    const expectedSushiTokenBalanceAfterClaim = await sushiRewardInstance.balanceOf(this.testDeFiAdapter.address);
+    expect(actualSushiTokenBalanceAfterClaim).to.be.eq(expectedSushiTokenBalanceAfterClaim);
+    // 10. assert whether the extra reward token's balance is as expected or not after claiming
+    const rewarderAddress = await masterChefV2Instance.rewarder(BigNumber.from(pool.pid));
+    if (rewarderAddress != hre.ethers.constants.AddressZero) {
+      const rewarderInstance = await hre.ethers.getContractAt("IRewarder", rewarderAddress);
+      let extraRewardTokenAddress;
+      if (pool.pid == "0") {
+        extraRewardTokenAddress = "0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF";
+      } else {
+        extraRewardTokenAddress = await rewarderInstance.rewardToken();
+      }
+      const extraRewardTokenInstance = await hre.ethers.getContractAt("IERC20", extraRewardTokenAddress);
+      const actualRewardTokenBalanceAfterClaim = await this.testDeFiAdapter.getERC20TokenBalance(
+        extraRewardTokenAddress,
+        this.testDeFiAdapter.address,
+      );
+      const expectedRewardTokenBalanceAfterClaim = await extraRewardTokenInstance.balanceOf(
+        this.testDeFiAdapter.address,
+      );
+      expect(actualRewardTokenBalanceAfterClaim).to.be.eq(expectedRewardTokenBalanceAfterClaim);
+    }
     if (vaultUnderlyingTokens.includes(getAddress(pool.tokens[0]))) {
-      // 4. Swap the reward token into underlying token
+      // 11. Swap the reward token into underlying token
       try {
         await this.testDeFiAdapter.testGetHarvestAllCodes(
           pool.pool,
@@ -104,7 +123,7 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
           this.sushiswapMasterChefV2AdapterEthereum.address,
           getOverrideOptions(),
         );
-        // 4.1 assert whether the reward token is swapped to underlying token or not
+        // 12. assert whether the reward token is swapped to underlying token or not
         expect(await this.testDeFiAdapter.getERC20TokenBalance(pool.tokens[0], this.testDeFiAdapter.address)).to.be.gte(
           0,
         );
@@ -113,14 +132,14 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
         // may throw error from DEX due to insufficient reserves
       }
     }
-    // 6. Withdraw all lpToken balance
+    // 13. Withdraw all lpToken balance
     await this.testDeFiAdapter.testGetWithdrawAllCodes(
       pool.tokens[0],
       pool.pool,
       this.sushiswapMasterChefV2AdapterEthereum.address,
       getOverrideOptions(),
     );
-    // 6.1 assert whether lpToken balance is as expected or not
+    // 14. assert whether lpToken balance is as expected or not
     const actualLPTokenBalanceAfterWithdraw =
       await this.sushiswapMasterChefV2AdapterEthereum.getLiquidityPoolTokenBalance(
         this.testDeFiAdapter.address,
@@ -130,7 +149,7 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     const expectedLPTokenBalanceAfterWithdraw = (await masterChefV2Instance.userInfo(pid, this.testDeFiAdapter.address))
       .amount;
     expect(actualLPTokenBalanceAfterWithdraw).to.be.eq(expectedLPTokenBalanceAfterWithdraw);
-    // 6.2 assert whether underlying token balance is as expected or not after withdraw
+    // 15. assert whether underlying token balance is as expected or not after withdraw
     const actualUnderlyingTokenBalanceAfterWithdraw = await this.testDeFiAdapter.getERC20TokenBalance(
       pool.tokens[0],
       this.testDeFiAdapter.address,
