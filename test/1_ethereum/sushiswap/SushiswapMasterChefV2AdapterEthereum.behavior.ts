@@ -17,6 +17,9 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     if (pool.deprecated === true) {
       this.skip();
     }
+    await this.testDeFiAdapter.setUnderlyingToken(pool.tokens[0]);
+    const strategyStep = { pool: pool.pool, outputToken: pool.lpToken, isBorrow: false };
+    await this.testDeFiAdapter.setInvestStrategySteps(strategyStep);
     const pid = BigNumber.from(pool.pid);
     // harvest finance's deposit vault instance
     const masterChefV2Instance = await hre.ethers.getContractAt("ISushiswapMasterChefV2", pool.pool);
