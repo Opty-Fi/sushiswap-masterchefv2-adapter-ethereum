@@ -13,7 +13,7 @@ interface IRewarder {
     event LogUpdatePool(uint256 indexed pid, uint64 lastRewardTime, uint256 lpSupply, uint256 accToken1PerShare);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    function MASTERCHEF_V2() external view returns (address);
+    function MASTERCHEF_V2() external view returns (address); // solhint-disable-line func-name-mixedcase
 
     function claimOwnership() external;
 
