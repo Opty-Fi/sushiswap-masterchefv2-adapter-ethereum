@@ -510,25 +510,4 @@ contract SushiswapMasterChefV2AdapterEthereum is
             _path[2] = _finalToken;
         }
     }
-
-    /**
-     * @dev Get the underlying token amount equivalent to reward token amount
-     * @param _rewardToken Reward token address
-     * @param _underlyingToken Token address acting as underlying Asset for the vault contract
-     * @param _amount reward token balance amount
-     * @return equivalent reward token balance in Underlying token value
-     */
-    function _getRewardBalanceInUnderlyingTokens(
-        address _rewardToken,
-        address _underlyingToken,
-        uint256 _amount
-    ) internal view returns (uint256) {
-        try
-            IUniswapV2Router02(SUSHISWAP_ROUTER).getAmountsOut(_amount, _getPath(_rewardToken, _underlyingToken))
-        returns (uint256[] memory _amountsA) {
-            return _amountsA[_amountsA.length - 1];
-        } catch {
-            return 0;
-        }
-    }
 }
