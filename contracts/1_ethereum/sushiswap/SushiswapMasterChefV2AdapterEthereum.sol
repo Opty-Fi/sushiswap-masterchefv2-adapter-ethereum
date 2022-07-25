@@ -71,7 +71,6 @@ contract SushiswapMasterChefV2AdapterEthereum is
     mapping(address => uint256) public underlyingTokenToPid;
 
     /** @notice List of Sushiswap pairs */
-    address public constant WETH_ALCX = address(0xC3f279090a47e80990Fe3a9c30d24Cb117EF91a8);
     address public constant YGG_WETH = address(0x99B42F2B49C395D2a77D973f6009aBb5d67dA343);
     address public constant WETH_ENS = address(0xa1181481bEb2dc5De0DaF2c85392d81C704BF75D);
     address public constant WETH_IMX = address(0x18Cd890F4e23422DC4aa8C2D6E0Bd3F3bD8873d8);
