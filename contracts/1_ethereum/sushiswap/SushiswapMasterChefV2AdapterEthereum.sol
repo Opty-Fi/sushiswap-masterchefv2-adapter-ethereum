@@ -52,6 +52,11 @@ contract SushiswapMasterChefV2AdapterEthereum is
 {
     using Address for address;
 
+    struct Pid {
+        address underlyingToken;
+        uint256 pid;
+    }
+
     /** @notice max deposit value datatypes */
     MaxExposure public maxDepositProtocolMode;
 
@@ -239,15 +244,12 @@ contract SushiswapMasterChefV2AdapterEthereum is
 
     /**
      * @notice Map underlyingToken to its pool ID
-     * @param _underlyingTokens pair contract addresses to be mapped with pool ID
-     * @param _pids pool IDs to be linked with pair address
+     * @param _pids array of structs that includes pair address and pool IDs
      */
-    function setUnderlyingTokenToPid(address[] memory _underlyingTokens, uint256[] memory _pids) public onlyOperator {
-        uint256 _underlyingTokensLen = _underlyingTokens.length;
+    function setUnderlyingTokenToPid(Pid[] calldata _pids) public onlyOperator {
         uint256 _pidsLen = _pids.length;
-        require(_underlyingTokensLen == _pidsLen, "inequal length of underlyingtokens and pids");
-        for (uint256 _i; _i < _underlyingTokensLen; _i++) {
-            underlyingTokenToPid[_underlyingTokens[_i]] = _pids[_i];
+        for (uint256 _i; _i < _pidsLen; _i++) {
+            underlyingTokenToPid[_pids[_i].underlyingToken] = _pids[_i].pid;
         }
     }
 

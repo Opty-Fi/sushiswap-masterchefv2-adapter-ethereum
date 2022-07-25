@@ -21,9 +21,9 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
     const strategyStep = { pool: pool.pool, outputToken: pool.lpToken, isBorrow: false };
     await this.testDeFiAdapter.setInvestStrategySteps(strategyStep);
     const pid = BigNumber.from(pool.pid);
-    // harvest finance's deposit vault instance
+    // Sushiswap's MasterChef V2 instance
     const masterChefV2Instance = await hre.ethers.getContractAt("ISushiswapMasterChefV2", pool.pool);
-    // harvest finance reward token's instance
+    // Sushiswap's reward token instance
     const sushiRewardInstance = await hre.ethers.getContractAt("IERC20", rewardToken);
     // underlying token instance
     const underlyingTokenInstance = await hre.ethers.getContractAt("ERC20", pool.tokens[0]);
@@ -158,5 +158,24 @@ export function shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum(token: stri
       this.testDeFiAdapter.address,
     );
     expect(actualUnderlyingTokenBalanceAfterWithdraw).to.be.eq(expectedUnderlyingTokenBalanceAfterWithdraw);
+    // 16. non-operator shouldn't be able to set underlying tokens to pids
+    await expect(
+      this.sushiswapMasterChefV2AdapterEthereum
+        .connect(this.signers.alice)
+        .setUnderlyingTokenToPid([{ underlyingToken: "0xEF0881eC094552b2e128Cf945EF17a6752B4Ec5d", pid: 100 }]),
+    ).to.be.revertedWith("caller is not the operator");
+    // 17. operator shouldn be able to set underlying tokens to pids
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [this.signers.operator.address],
+    });
+    await this.sushiswapMasterChefV2AdapterEthereum
+      .connect(this.signers.operator)
+      .setUnderlyingTokenToPid([{ underlyingToken: "0xEF0881eC094552b2e128Cf945EF17a6752B4Ec5d", pid: 100 }]);
+    expect(
+      await this.sushiswapMasterChefV2AdapterEthereum.underlyingTokenToPid(
+        "0xEF0881eC094552b2e128Cf945EF17a6752B4Ec5d",
+      ),
+    ).to.be.eq(100);
   }).timeout(100000);
 }
