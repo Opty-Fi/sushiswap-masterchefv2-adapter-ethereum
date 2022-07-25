@@ -16,8 +16,6 @@ import { IAdapterHarvestReward } from "@optyfi/defi-legos/interfaces/defiAdapter
 import "@optyfi/defi-legos/interfaces/defiAdapters/contracts/IAdapterInvestLimit.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
-import "hardhat/console.sol";
-
 interface IVault {
     /**
      * @notice Container for Strategy Steps used by Strategy
