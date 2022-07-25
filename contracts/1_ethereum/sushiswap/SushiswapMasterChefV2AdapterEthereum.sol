@@ -203,13 +203,11 @@ contract SushiswapMasterChefV2AdapterEthereum is
     {
         IVault.StrategyStep[] memory _investStrategySteps = IVault(_vault).getInvestStrategySteps();
         uint256 _nSteps = _investStrategySteps.length;
-        address _vaultUT = IVault(_vault).underlyingToken();
-        address _outputToken = _investStrategySteps[_nSteps - 1].outputToken;
         uint256 _pid;
-        if (underlyingTokenToPid[_vaultUT] != uint256(0)) {
-            _pid = underlyingTokenToPid[_vaultUT];
-        } else if (underlyingTokenToPid[_outputToken] != uint256(0)) {
-            _pid = underlyingTokenToPid[_outputToken];
+        if (_nSteps == uint256(1)) {
+            _pid = underlyingTokenToPid[IVault(_vault).underlyingToken()];
+        } else {
+            _pid = underlyingTokenToPid[_investStrategySteps[_nSteps - 2].outputToken];
         }
         _codes = new bytes[](1);
         _codes[0] = abi.encode(_masterChef, abi.encodeWithSignature("harvest(uint256,address)", _pid, _vault));
