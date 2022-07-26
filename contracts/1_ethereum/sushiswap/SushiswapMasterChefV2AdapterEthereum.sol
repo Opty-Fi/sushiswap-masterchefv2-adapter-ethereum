@@ -11,10 +11,12 @@ import { AdapterModifiersBase } from "../../utils/AdapterModifiersBase.sol";
 // interfaces
 import { ISushiswapMasterChefV2 } from "@optyfi/defi-legos/ethereum/sushiswap/contracts/ISushiswapMasterChefV2.sol";
 import { IERC20 } from "@openzeppelin/contracts-0.8.x/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts-0.8.x/token/ERC20/extensions/IERC20Metadata.sol";
 import { IAdapter } from "@optyfi/defi-legos/interfaces/defiAdapters/contracts/IAdapter.sol";
 import { IAdapterHarvestReward } from "@optyfi/defi-legos/interfaces/defiAdapters/contracts/IAdapterHarvestReward.sol";
 import "@optyfi/defi-legos/interfaces/defiAdapters/contracts/IAdapterInvestLimit.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+import { IOptyFiOracle } from "../../utils/optyfi-oracle/contracts/interfaces/IOptyFiOracle.sol";
 
 interface IVault {
     /**
@@ -57,14 +59,32 @@ contract SushiswapMasterChefV2AdapterEthereum is
         uint256 pid;
     }
 
-    /** @notice max deposit value datatypes */
-    MaxExposure public maxDepositProtocolMode;
+    struct Tolerance {
+        address underlyingToken;
+        uint256 tolerance;
+    }
+
+    /** @notice List of Sushiswap pairs */
+    address public constant YGG_WETH = address(0x99B42F2B49C395D2a77D973f6009aBb5d67dA343);
+    address public constant WETH_ENS = address(0xa1181481bEb2dc5De0DaF2c85392d81C704BF75D);
+    address public constant WETH_IMX = address(0x18Cd890F4e23422DC4aa8C2D6E0Bd3F3bD8873d8);
+    address public constant WETH_JPEG = address(0xdB06a76733528761Eda47d356647297bC35a98BD);
+    address public constant APE_USDT = address(0xB27C7b131Cf4915BeC6c4Bc1ce2F33f9EE434b9f);
 
     /** @notice Sushiswap router contract address */
     address public constant SUSHISWAP_ROUTER = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
+    /** @notice Denominator for basis points calculations */
+    uint256 public constant DENOMINATOR = 10000;
+
+    /** @notice max deposit value datatypes */
+    MaxExposure public maxDepositProtocolMode;
+
     /** @notice max deposit's protocol value in percentage */
     uint256 public maxDepositProtocolPct; // basis points
+
+    /** @notice  OptyFi Oracle contract address */
+    IOptyFiOracle public optyFiOracle;
 
     /** @notice Maps liquidityPool to max deposit value in percentage */
     mapping(address => uint256) public maxDepositPoolPct; // basis points
@@ -75,14 +95,10 @@ contract SushiswapMasterChefV2AdapterEthereum is
     /** @notice Maps underlyingToken to the ID of its pool */
     mapping(address => uint256) public underlyingTokenToPid;
 
-    /** @notice List of Sushiswap pairs */
-    address public constant YGG_WETH = address(0x99B42F2B49C395D2a77D973f6009aBb5d67dA343);
-    address public constant WETH_ENS = address(0xa1181481bEb2dc5De0DaF2c85392d81C704BF75D);
-    address public constant WETH_IMX = address(0x18Cd890F4e23422DC4aa8C2D6E0Bd3F3bD8873d8);
-    address public constant WETH_JPEG = address(0xdB06a76733528761Eda47d356647297bC35a98BD);
-    address public constant APE_USDT = address(0xB27C7b131Cf4915BeC6c4Bc1ce2F33f9EE434b9f);
+    /** @notice Maps underlying token to maximum price deviation */
+    mapping(address => uint256) public underlyingTokenToTolerance;
 
-    constructor(address _registry) AdapterModifiersBase(_registry) {
+    constructor(address _registry, address _optyFiOracle) AdapterModifiersBase(_registry) {
         maxDepositProtocolPct = uint256(10000); // 100% (basis points)
         maxDepositProtocolMode = MaxExposure.Pct;
         underlyingTokenToPid[YGG_WETH] = uint256(6);
@@ -90,6 +106,26 @@ contract SushiswapMasterChefV2AdapterEthereum is
         underlyingTokenToPid[WETH_IMX] = uint256(27);
         underlyingTokenToPid[WETH_JPEG] = uint256(54);
         underlyingTokenToPid[APE_USDT] = uint256(55);
+        optyFiOracle = IOptyFiOracle(_optyFiOracle);
+    }
+
+    /**
+     * @notice Sets the OptyFi Oracle contract
+     * @param _optyFiOracle OptyFi Oracle contract address
+     */
+    function setOptyFiOracle(address _optyFiOracle) external onlyOperator {
+        optyFiOracle = IOptyFiOracle(_optyFiOracle);
+    }
+
+    /**
+     * @notice Sets the price deviation tolerance for a set of underlying tokens
+     * @param _tolerances array of Tolerance structs that links underlying tokens to tolerances
+     */
+    function setUnderlyingTokenToTolerance(Tolerance[] calldata _tolerances) external onlyRiskOperator {
+        uint256 _len = _tolerances.length;
+        for (uint256 i; i < _len; i++) {
+            underlyingTokenToTolerance[_tolerances[i].underlyingToken] = _tolerances[i].tolerance;
+        }
     }
 
     /**
@@ -452,6 +488,7 @@ contract SushiswapMasterChefV2AdapterEthereum is
                 _getPath(_rewardToken, _underlyingToken)
             );
             if (_amounts[_amounts.length - 1] > 0) {
+                uint256 _minAmountOut = _calculateMinAmountOut(_rewardTokenAmount, _rewardToken, _underlyingToken);
                 _codes = new bytes[](3);
                 _codes[0] = abi.encode(
                     _rewardToken,
@@ -464,10 +501,11 @@ contract SushiswapMasterChefV2AdapterEthereum is
                 _codes[2] = abi.encode(
                     SUSHISWAP_ROUTER,
                     abi.encodeCall(
-                        IUniswapV2Router01(SUSHISWAP_ROUTER).swapExactTokensForTokens,
+                        IUniswapV2Router02(SUSHISWAP_ROUTER).swapExactTokensForTokens,
                         (
                             _rewardTokenAmount,
-                            uint256(0),
+                            ((_minAmountOut * (DENOMINATOR - underlyingTokenToTolerance[_underlyingToken])) /
+                                DENOMINATOR),
                             _getPath(_rewardToken, _underlyingToken),
                             _vault,
                             type(uint256).max
@@ -476,6 +514,24 @@ contract SushiswapMasterChefV2AdapterEthereum is
                 );
             }
         }
+    }
+
+    /**
+     * @dev Get the expected amount to receive of _tokenOut after swapping _tokenIn
+     * @param _amountIn Amount of _tokenIn to be swapped for _tokenOut
+     * @param _tokenIn Contract address of the origin token
+     * @param _tokenOut Contract address of the destination token
+     */
+    function _calculateMinAmountOut(
+        uint256 _amountIn,
+        address _tokenIn,
+        address _tokenOut
+    ) internal view returns (uint256 _swapOutAmount) {
+        uint256 price = optyFiOracle.getTokenPrice(_tokenIn, _tokenOut);
+        require(price > uint256(0), "!price");
+        uint256 decimalsIn = uint256(IERC20Metadata(_tokenIn).decimals());
+        uint256 decimalsOut = uint256(IERC20Metadata(_tokenOut).decimals());
+        _swapOutAmount = (_amountIn * price * 10**decimalsOut) / 10**(18 + decimalsIn);
     }
 
     /**
