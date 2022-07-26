@@ -17,6 +17,7 @@ import {
   eOptimisticEthereumNetwork,
   ePolygonNetwork,
   eXDaiNetwork,
+  iParamsPerNetwork,
 } from "./helpers/types";
 import { NETWORKS_RPC_URL, buildForkConfig, NETWORKS_CHAIN_ID, NETWORKS_DEFAULT_GAS } from "./helper-hardhat-config";
 
@@ -43,10 +44,10 @@ if (!SKIP_LOAD) {
 }
 
 const getCommonNetworkConfig = (networkName: eNetwork): NetworkUserConfig | undefined => ({
-  url: NETWORKS_RPC_URL[networkName],
+  url: NETWORKS_RPC_URL[networkName as keyof iParamsPerNetwork<string>],
   hardfork: HARDFORK,
   gasPrice: "auto",
-  chainId: NETWORKS_CHAIN_ID[networkName],
+  chainId: NETWORKS_CHAIN_ID[networkName as keyof iParamsPerNetwork<string>],
   initialBaseFeePerGas: 1_00_000_000,
   accounts: {
     mnemonic: MNEMONIC,
@@ -80,8 +81,8 @@ const config: HardhatUserConfig = {
     goerli_oethereum: getCommonNetworkConfig(eOptimisticEthereumNetwork.goerli_oethereum),
     hardhat: {
       hardfork: "london",
-      gasPrice: NETWORKS_DEFAULT_GAS[NETWORK],
-      chainId: NETWORKS_CHAIN_ID[NETWORK],
+      gasPrice: NETWORKS_DEFAULT_GAS[NETWORK as keyof iParamsPerNetwork<string>],
+      chainId: NETWORKS_CHAIN_ID[NETWORK as keyof iParamsPerNetwork<string>],
       initialBaseFeePerGas: 1_00_000_000,
       accounts: {
         initialIndex: 0,
