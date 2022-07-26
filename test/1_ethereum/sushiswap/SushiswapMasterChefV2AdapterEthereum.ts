@@ -2,10 +2,8 @@ import hre from "hardhat";
 import { Artifact } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import SushiswapMasterChefV2EthereumPools from "../../../helpers/poolsV2.json";
-import {
-  SushiswapMasterChefV2AdapterEthereum,
-  OptyFiOracle,
-} from "../../../typechain/SushiswapMasterChefV2AdapterEthereum";
+import { SushiswapMasterChefV2AdapterEthereum } from "../../../typechain/SushiswapMasterChefV2AdapterEthereum";
+import { OptyFiOracle } from "../../../typechain";
 import { TestDeFiAdapter } from "../../../typechain/TestDeFiAdapter";
 import { LiquidityPool, Signers } from "../types";
 import { shouldBehaveLikeSushiswapMasterChefV2AdapterEthereum } from "./SushiswapMasterChefV2AdapterEthereum.behavior";

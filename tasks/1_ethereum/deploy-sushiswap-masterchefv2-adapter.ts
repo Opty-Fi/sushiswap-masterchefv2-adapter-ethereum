@@ -1,10 +1,7 @@
 import { task } from "hardhat/config";
 import { TaskArguments } from "hardhat/types";
 
-import {
-  SushiswapMasterChefV2AdapterEthereum,
-  SushiswapMasterChefV2AdapterEthereum__factory,
-} from "../../../typechain";
+import { SushiswapMasterChefV2AdapterEthereum, SushiswapMasterChefV2AdapterEthereum__factory } from "../../typechain";
 
 task("deploy-sushiswap-masterchefv2-adapter").setAction(async function (taskArguments: TaskArguments, { ethers }) {
   const sushiswapMasterChefV2AdapterEthereumFactory: SushiswapMasterChefV2AdapterEthereum__factory =
