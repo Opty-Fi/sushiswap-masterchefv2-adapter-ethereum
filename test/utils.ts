@@ -8,7 +8,7 @@ export function getOverrideOptions(): TransactionRequest {
   };
 }
 
-const setStorageAt = (address: string, slot: string, val: string) =>
+const setStorageAt = (address: string, slot: string, val: string): Promise<any> =>
   hre.network.provider.send("hardhat_setStorageAt", [address, slot, val]);
 
 const tokenBalancesSlot = async (token: ERC20) => {
@@ -43,15 +43,15 @@ const tokenBalancesSlot = async (token: ERC20) => {
   throw "balances slot not found!";
 };
 
-// Source : https://blog.euler.finance/brute-force-storage-layout-discovery-in-erc20-contracts-with-hardhat-7ff9342143ed
-export async function setTokenBalanceInStorage(token: ERC20, account: string, amount: string) {
+// Source : https://github.com/Opty-Fi/defi-adapter-kit/blob/e41ab7607f737b9322b3d19d2144b0f94efc692d/test/utils.ts
+export async function setTokenBalanceInStorage(token: ERC20, account: string, amount: string): Promise<number | void> {
   const balancesSlot = await tokenBalancesSlot(token);
   if (balancesSlot.isVyper) {
     return setStorageAt(
       token.address,
-      ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(["uint256", "address"], [balancesSlot.index, account]),
-      ),
+      ethers.utils
+        .keccak256(ethers.utils.defaultAbiCoder.encode(["uint256", "address"], [balancesSlot.index, account]))
+        .replace("0x0", "0x"),
       "0x" +
         ethers.utils
           .parseUnits(amount, await token.decimals())
@@ -62,9 +62,9 @@ export async function setTokenBalanceInStorage(token: ERC20, account: string, am
   } else {
     return setStorageAt(
       token.address,
-      ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [account, balancesSlot.index]),
-      ),
+      ethers.utils
+        .keccak256(ethers.utils.defaultAbiCoder.encode(["address", "uint256"], [account, balancesSlot.index]))
+        .replace("0x0", "0x"),
       "0x" +
         ethers.utils
           .parseUnits(amount, await token.decimals())

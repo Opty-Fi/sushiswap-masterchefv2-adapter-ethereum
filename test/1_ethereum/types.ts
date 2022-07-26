@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { Fixture } from "ethereum-waffle";
-import { HarvestFinanceAdapter } from "../../typechain/HarvestFinanceAdapter";
+import { SushiswapMasterChefV2AdapterEthereum, OptyFiOracle } from "../../typechain";
 import { IUniswapV2Router02 } from "../../typechain/IUniswapV2Router02";
 import { TestDeFiAdapter } from "../../typechain/TestDeFiAdapter";
 
@@ -9,10 +9,6 @@ export interface Signers {
   owner: SignerWithAddress;
   deployer: SignerWithAddress;
   alice: SignerWithAddress;
-  bob: SignerWithAddress;
-  charlie: SignerWithAddress;
-  dave: SignerWithAddress;
-  eve: SignerWithAddress;
   operator: SignerWithAddress;
 }
 
@@ -24,6 +20,7 @@ export interface PoolItem {
   tokens: string[];
   swap?: string;
   deprecated?: boolean;
+  pid?: string;
 }
 
 export interface LiquidityPool {
@@ -32,9 +29,10 @@ export interface LiquidityPool {
 
 declare module "mocha" {
   export interface Context {
-    harvestFinanceAdapter: HarvestFinanceAdapter;
+    sushiswapMasterChefV2AdapterEthereum: SushiswapMasterChefV2AdapterEthereum;
     testDeFiAdapter: TestDeFiAdapter;
-    uniswapV2Router02: IUniswapV2Router02;
+    optyFiOracle: OptyFiOracle;
+    sushiswapRouter: IUniswapV2Router02;
     loadFixture: <T>(fixture: Fixture<T>) => Promise<T>;
     signers: Signers;
   }

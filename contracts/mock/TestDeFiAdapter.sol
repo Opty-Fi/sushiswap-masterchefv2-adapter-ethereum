@@ -16,6 +16,29 @@ import { MultiCall } from "../utils/MultiCall.sol";
 ////////////////////////////////
 
 contract TestDeFiAdapter is MultiCall {
+    struct StrategyStep {
+        address pool;
+        address outputToken;
+        bool isBorrow;
+    }
+
+    address public underlyingToken;
+
+    StrategyStep[] public strategySteps;
+
+    function setUnderlyingToken(address _underlyingToken) public {
+        underlyingToken = _underlyingToken;
+    }
+
+    function setInvestStrategySteps(StrategyStep memory _strategyStep) public {
+        delete strategySteps;
+        strategySteps.push(_strategyStep);
+    }
+
+    function getInvestStrategySteps() public view returns (StrategyStep[] memory) {
+        return strategySteps;
+    }
+
     function testGetDepositAllCodes(
         address _underlyingToken,
         address _liquidityPool,
