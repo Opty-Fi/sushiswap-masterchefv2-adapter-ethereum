@@ -70,6 +70,7 @@ contract SushiswapMasterChefV2AdapterEthereum is
     address public constant WETH_IMX = address(0x18Cd890F4e23422DC4aa8C2D6E0Bd3F3bD8873d8);
     address public constant WETH_JPEG = address(0xdB06a76733528761Eda47d356647297bC35a98BD);
     address public constant APE_USDT = address(0xB27C7b131Cf4915BeC6c4Bc1ce2F33f9EE434b9f);
+    address public constant CVX_WETH = address(0x05767d9EF41dC40689678fFca0608878fb3dE906);
 
     /** @notice Sushiswap router contract address */
     address public constant SUSHISWAP_ROUTER = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
@@ -106,6 +107,7 @@ contract SushiswapMasterChefV2AdapterEthereum is
         underlyingTokenToPid[WETH_IMX] = uint256(27);
         underlyingTokenToPid[WETH_JPEG] = uint256(54);
         underlyingTokenToPid[APE_USDT] = uint256(55);
+        underlyingTokenToPid[CVX_WETH] = uint256(1);
         optyFiOracle = IOptyFiOracle(_optyFiOracle);
     }
 
